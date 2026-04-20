@@ -49,15 +49,57 @@ def process_task(task_id: int, base_keyword: str, platform: str) -> None:
 def run():
     show_header(BRAND)
 
-    # 直接读取 Excel 中所有关键词，随机打乱顺序
+    # 读取 Excel 中所有关键词，按科室分类
     df = pd.read_excel("data/keywords.xlsx")
-    keywords = df["keyword"].dropna().tolist()
-    random.shuffle(keywords)
+    
+    # 确保有 "科室" 列
+    if "科室" not in df.columns:
+        # 如果没有科室列，默认按关键词内容简单分类
+        def classify_keyword(kw):
+            kw = str(kw).lower()
+            if any(word in kw for word in ["妇科", "白带", "月经", "人流", "备孕", "宫颈", "妇科检查"]):
+                return "妇科"
+            elif any(word in kw for word in ["皮肤", "痘痘", "皮炎", "湿疹", "痤疮", "毛囊炎", "激光", "光子"]):
+                return "皮肤科"
+            else:
+                return "常规体检"
+        df["科室"] = df["keyword"].apply(classify_keyword)
+    
+    # 按科室分组
+    gyn_keywords = df[df["科室"] == "妇科"]["keyword"].dropna().tolist()
+    derm_keywords = df[df["科室"] == "皮肤科"]["keyword"].dropna().tolist()
+    exam_keywords = df[df["科室"] == "常规体检"]["keyword"].dropna().tolist()
+    
+    # 计算各科室需要的数量
+    total = BATCH_SIZE
+    gyn_count = max(1, int(total * 0.3))  # 至少1个
+    derm_count = max(1, int(total * 0.6))  # 至少1个
+    exam_count = max(1, total - gyn_count - derm_count)  # 至少1个
+    
+    # 随机抽取关键词
+    random.shuffle(gyn_keywords)
+    random.shuffle(derm_keywords)
+    random.shuffle(exam_keywords)
+    
+    # 确保有足够的关键词
+    def ensure_enough(keywords, count, category):
+        if len(keywords) < count:
+            # 如果关键词不足，重复使用
+            while len(keywords) < count:
+                keywords.extend(keywords[:count - len(keywords)])
+        return keywords[:count]
+    
+    selected_gyn = ensure_enough(gyn_keywords, gyn_count, "妇科")
+    selected_derm = ensure_enough(derm_keywords, derm_count, "皮肤科")
+    selected_exam = ensure_enough(exam_keywords, exam_count, "常规体检")
+    
+    selected_kw = selected_gyn + selected_derm + selected_exam
+    random.shuffle(selected_kw)
 
     platforms = ["zhihu", "sohu", "baijiahao", "toutiao"]
 
     # 构建任务列表：随机抽取 BATCH_SIZE 篇（关键词 × 平台随机组合）
-    pairs = [(kw, p) for kw in keywords for p in platforms]
+    pairs = [(kw, p) for kw in selected_kw for p in platforms]
     random.shuffle(pairs)
     tasks = [(i + 1, kw, p) for i, (kw, p) in enumerate(pairs[:BATCH_SIZE])]
 

@@ -3,7 +3,7 @@ import random
 from datetime import datetime
 from functools import lru_cache
 
-from config import BRAND, MIN_SCORE, MAX_RETRY
+from config import BRAND, MIN_SCORE, MAX_RETRY, PLATFORM_MIN_SCORE
 from modules.llm import call_llm
 from modules.randomizer import random_profile, random_style, random_trigger
 from modules.anti_ai import anti_ai_pipeline
@@ -159,10 +159,11 @@ def generate_article(keyword: str, platform: str, platform_prompt: str):
     # ----- Step 3: 评分 & 重试 -----
     with step("[3/3] 质量评分"):
         score = score_article(article)
-    show_score(score, MIN_SCORE)
+    min_score = PLATFORM_MIN_SCORE.get(platform, MIN_SCORE)
+    show_score(score, min_score)
 
     retry = 0
-    while score < MIN_SCORE and retry < MAX_RETRY:
+    while score < min_score and retry < MAX_RETRY:
         retry += 1
         show_retry(retry, score, MAX_RETRY)
 

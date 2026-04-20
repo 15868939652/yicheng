@@ -23,3 +23,11 @@ MIN_SCORE          = 70          # 低于此分数触发重试
 MAX_RETRY          = 2           # 最多重试次数
 CONCURRENT_WORKERS = 2           # 并发篇数（建议 2-3，过高易触发 API 限流）
 BATCH_SIZE         = 10          # 每次运行生成的总篇数（从关键词池随机抽取）
+
+# 平台差异化评分阈值
+PLATFORM_MIN_SCORE = {
+    "toutiao": 70,    # 患者视角：标准阈值
+    "zhihu": 70,      # 患者视角：标准阈值
+    "sohu": 50,       # 搜狐号：更低阈值，更容易通过
+    "baijiahao": 60,  # 自媒体：放宽阈值
+}
