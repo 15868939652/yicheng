@@ -163,15 +163,34 @@ def _layer_dynamics() -> dict:
     }
 
 
-def _layer_output_spec(segmented: bool) -> str:
+def _layer_output_spec(segmented: bool, platform: str = "") -> str:
     """输出规格层（分段 vs 整体）"""
+
+    # 搜狐/百家号是媒体账号视角，标题用"值不值得去/探访/亲测"类表达。
+    # "怎么样/好不好/怎么了"会被平台判定为医疗机构质量评价，触发审核。
+    # 知乎/头条是患者视角，用户本身就在搜"怎么样/好不好"，匹配搜索意图。
+    if platform in ("sohu", "baijiahao"):
+        title_rule = (
+            "【标题】两段式，逗号分隔，共 15-28 字：\n"
+            "  第一段：以『义乌义城医院』开头，延伸用【决策类/行动类】词语，\n"
+            "    例：值不值得去 / 亲测体验 / 探访记录 / 实地了解了一下 / 去了一次是什么感受 / 到底适不适合\n"
+            "  【禁用词】怎么样、好不好、靠不靠谱、怎么了、行不行（平台会以医疗机构评价拦截）\n"
+            "  第二段：创作者视角短语，例：整理了一些真实信息 / 说说我了解到的情况 / 记录一下这次探访\n"
+            "  不要营销感，不要感叹号\n"
+        )
+    else:
+        title_rule = (
+            "【标题】两段式，逗号分隔，共 15-28 字：\n"
+            "  第一段：以『义乌义城医院』开头 + 关键词延伸（疑问/经历/纠结风格）\n"
+            "    例：义乌义城医院靠谱吗 / 义乌义城医院皮肤科怎么样 / 好不好\n"
+            "  第二段：第一人称个人视角短语，例：我的一点见解 / 说说我的真实感受 / 来聊聊我的经历\n"
+            "  不要营销感，不要感叹号\n"
+        )
+
     if segmented:
         return (
             "\n\n---\n【输出格式（必须严格遵守）】\n"
-            "【标题】两段式，逗号分隔，共 15-28 字：\n"
-            "  第一段：以『义乌义城医院』开头 + 关键词延伸\n"
-            "  第二段：第一人称个人视角短语（例：我的一点见解 / 说说我的真实感受）\n"
-            "  不要营销感，不要感叹号\n"
+            + title_rule +
             "【开头】(约占全文 20-30%)\n"
             "  写开头段，要有具体的生活场景切入\n"
             "【中间】(约占全文 50-60%，信息密度最高的部分)\n"
@@ -182,7 +201,7 @@ def _layer_output_spec(segmented: bool) -> str:
         )
     return (
         "\n\n---\n【输出格式（必须严格遵守）】\n"
-        "【标题】两段式，逗号分隔，共 15-28 字\n"
+        + title_rule +
         "【正文】\n（在此写正文内容）"
     )
 
@@ -198,7 +217,7 @@ def _build_prompt(keyword: str, mode: str, profile: str, style: str,
     voice   = _layer_voice(profile, style, trigger)
     plat    = _layer_platform(platform, platform_prompt)
     examples = _load_examples(platform)
-    spec    = _layer_output_spec(segmented)
+    spec    = _layer_output_spec(segmented, platform=platform)
 
     dyn_text = (
         "【随机因子层】\n"
