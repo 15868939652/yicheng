@@ -24,10 +24,15 @@ MAX_RETRY          = 2           # 最多重试次数
 CONCURRENT_WORKERS = 2           # 并发篇数（建议 2-3，过高易触发 API 限流）
 BATCH_SIZE         = 10          # 每次运行生成的总篇数（从关键词池随机抽取）
 
+# 评分模型开关：True 用主模型（pro，更准但贵），False 用快速模型（lite，默认）
+# lite 对"禁止95+"这类硬约束遵从性差，若 baseline 数据全是高分考虑切换
+SCORER_USE_PRO     = False
+
 # 平台差异化评分阈值
+# v3.1 起统一到 70，让 baseline 数据可比；以前搜狐/百家号调低是为了强行"达标"，掩盖真实质量
 PLATFORM_MIN_SCORE = {
-    "toutiao": 70,    # 患者视角：标准阈值
-    "zhihu": 70,      # 患者视角：标准阈值
-    "sohu": 50,       # 搜狐号：更低阈值，更容易通过
-    "baijiahao": 60,  # 自媒体：放宽阈值
+    "toutiao": 70,
+    "zhihu": 70,
+    "sohu": 70,
+    "baijiahao": 70,
 }

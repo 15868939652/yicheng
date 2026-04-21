@@ -9,6 +9,20 @@ _VARIATION_STYLES = [
     "用更口语化、随意的方式表达",
 ]
 
+# 问题标签 → 应改哪一段
+PROBLEM_TO_SEGMENT = {
+    "ai_opening":        "opening",
+    "no_scene":          "opening",
+    "marketing":         "opening",   # 营销词常出现在开头的定性里
+    "no_hesitation":     "opening",
+    "low_info_density":  "middle",
+    "paired_structure":  "middle",
+    "no_detail":         "middle",
+    "ai_ending":         "ending",
+    "summary":           "ending",
+    "structured":        "middle",    # 小标题/分点多在中间
+}
+
 
 def _load(name: str) -> str:
     path = os.path.join("prompts", "rewriter", name)
@@ -36,6 +50,33 @@ def semantic_variation(text: str) -> str:
 
 
 def apply_random_rewrite(text: str) -> str:
-    """随机选择一种重写方式（低分重试时调用）"""
+    """随机选择一种重写方式（兼容旧接口）"""
     fn = random.choice([rewrite_text, restructure_text, semantic_variation])
     return fn(text)
+
+
+# ========================= 段落级局部改写 =========================
+
+def rewrite_segment(segment_name: str, text: str, problems: list) -> str:
+    """
+    只改某一段。segment_name ∈ {opening, middle, ending}。
+    用 pro 模型保证改写质量。
+    """
+    prompt_file = f"segment_{segment_name}.txt"
+    prompt = (
+        _load(prompt_file)
+        .replace("{text}", text)
+        .replace("{problems}", "、".join(problems) or "整体 AI 感偏重")
+    )
+    result = call_llm(prompt, fast=False)
+    return (result or text).strip()
+
+
+def pick_target_segments(problems: list) -> list:
+    """根据问题标签决定要改哪些段。无匹配则返回 ['middle'] 保底。"""
+    targets = []
+    for tag in problems:
+        seg = PROBLEM_TO_SEGMENT.get(tag)
+        if seg and seg not in targets:
+            targets.append(seg)
+    return targets or ["middle"]
